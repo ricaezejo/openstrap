@@ -92,8 +92,13 @@ class FullScreenRouteMapTest {
         km2.assertIsNotSelected()
     }
 
-    @Test fun `a run under a kilometre has no km chips`() {
+    @Test fun `a run under a kilometre shows only its last-part chip`() {
         show { FullScreenRouteMapContent(summary(seconds = 134)) {} }
         rules.compose.onAllNodesWithText(app.getString(R.string.workout_summary_split_km, 1)).assertCountEquals(0)
+        val chip = rules.compose.onNodeWithText(text(R.string.workout_summary_split_last).substringBefore('%'), substring = true)
+        chip.performClick()
+        chip.assertIsSelected()
+        chip.performClick()
+        chip.assertIsNotSelected()
     }
 }
