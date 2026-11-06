@@ -199,7 +199,7 @@ fun WorkoutMap(
     LaunchedEffect(style, highlight) {
         style?.getSourceAs<GeoJsonSource>(HIGHLIGHT_SRC)?.setGeoJson(highlightGeoJson(highlight))
     }
-    LaunchedEffect(style, stretches, here, follow, highlight) {
+    LaunchedEffect(style, stretches, here, follow, highlight, fitPadding) {
         val s = style ?: return@LaunchedEffect
         s.getSourceAs<GeoJsonSource>(SOURCE)?.setGeoJson(geoJson(stretches))
         val last = here ?: stretches.lastOrNull()?.first?.lastOrNull()
