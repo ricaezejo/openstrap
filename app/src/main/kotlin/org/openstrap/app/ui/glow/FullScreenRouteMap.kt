@@ -1,5 +1,6 @@
 package org.openstrap.app.ui.glow
 
+import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.PaddingValues
@@ -10,6 +11,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.safeDrawing
 import androidx.compose.foundation.layout.windowInsetsPadding
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -22,8 +24,6 @@ import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.window.Dialog
-import androidx.compose.ui.window.DialogProperties
 import org.openstrap.app.R
 import org.openstrap.app.data.Route
 import org.openstrap.app.ui.dashboard.LocalHeartZones
@@ -38,17 +38,23 @@ internal fun rememberZoneStretches(summary: PhoneSummary): List<Pair<List<Route.
     }
 }
 
-/** The route map over the whole screen, in its own window so it covers the bars; Back or [onClose] closes it. */
+/**
+ * The route map as a view that takes the page's place, like the share screen: no window of its own, so its state saves
+ * and restores with the page's. The tab bar is hidden while it shows; Back or [onClose] closes it.
+ */
 @Composable
-internal fun FullScreenRouteMap(summary: PhoneSummary, onClose: () -> Unit) {
-    Dialog(
-        onDismissRequest = onClose,
-        properties = DialogProperties(usePlatformDefaultWidth = false, decorFitsSystemWindows = false),
-    ) { FullScreenRouteMapContent(summary, onClose) }
+internal fun FullScreenRouteMapScreen(summary: PhoneSummary, onClose: () -> Unit) {
+    BackHandler(onBack = onClose)
+    val hideTabBar = LocalHideTabBar.current
+    DisposableEffect(Unit) {
+        hideTabBar(true)
+        onDispose { hideTabBar(false) }
+    }
+    FullScreenRouteMapContent(summary, onClose)
 }
 
 /**
- * The map and its pills, without the window: Close top-end, Route only (or Show map) top-start, and Fit route top-centre
+ * The map and its pills: Close top-end, Route only (or Show map) top-start, and Fit route top-centre
  * once a drag has stopped the map following the route. Km markers sit along the line, and the split picker along the
  * bottom draws the chosen kilometre with a white casing and fits it.
  */
