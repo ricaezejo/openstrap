@@ -405,14 +405,6 @@ internal fun ZonesList(zones: ZoneSeconds, maxHr: Int, note: String = stringReso
     }
 }
 
-/** The Splits list's rows along [route], one per [Route.legs] kilometre shown: the list and the map's picker share them. */
-internal fun splitRowsFor(summary: PhoneSummary, route: List<Route.Point>): List<SplitRow> = SummaryCopy.splitRows(
-    Route.splits(route, summary.pauses),
-    summary.history,
-    route.firstOrNull()?.t,
-    summary.distanceMeters?.takeIf { !summary.distanceFromSteps },
-)
-
 /**
  * Splits for a GPS workout (each kilometre's time and average heart rate), with the laps under them when any were
  * marked; laps alone without GPS; sets for strength. Nothing without any of them. With [markFastest] the fastest
