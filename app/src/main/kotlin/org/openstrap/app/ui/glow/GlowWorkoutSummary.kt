@@ -9,6 +9,7 @@ import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
@@ -32,6 +33,8 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.geometry.Offset
@@ -328,15 +331,21 @@ private fun DropLine(readings: List<Pair<Long, Int>>, end: Long, modifier: Modif
     }
 }
 
-/** The kept route in its zones' colours; nothing without a route that goes somewhere. */
+/**
+ * The kept route in its zones' colours; nothing without a route that goes somewhere. Tapping the map calls [onOpen]
+ * when it is given.
+ */
 @Composable
-internal fun RouteMap(summary: PhoneSummary, modifier: Modifier = Modifier) {
-    val heartZones = LocalHeartZones.current
+internal fun RouteMap(summary: PhoneSummary, modifier: Modifier = Modifier, onOpen: (() -> Unit)? = null) {
     if (!Route.mappable(summary.route)) return
-    val stretches = remember(summary, heartZones) {
-        Route.byZone(summary.route, summary.history, summary.analysis.maxHeartRate, heartZones)
+    val stretches = rememberZoneStretches(summary)
+    val open = stringResource(R.string.glow_summary_map_open)
+    val tap = if (onOpen == null) {
+        Modifier
+    } else {
+        Modifier.clickable(onClickLabel = open, onClick = onOpen).semantics { contentDescription = open }
     }
-    Box(modifier.fillMaxWidth().height(170.dp).clip(GlowLayout.TileShape).background(Raised)) {
+    Box(modifier.fillMaxWidth().height(170.dp).clip(GlowLayout.TileShape).background(Raised).then(tap)) {
         WorkoutMap(stretches, routeOnly = false, Modifier.fillMaxSize())
     }
 }
