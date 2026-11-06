@@ -77,8 +77,7 @@ class FullScreenRouteMapRotationTest {
     private var generation by mutableStateOf(0)
 
     /** The workout page as a pane or a stack page, hosting the map as the real pages do. */
-    @Composable private fun Page() {
-        val model = viewModel<RouteMapModel>()
+    @Composable private fun Page(model: RouteMapModel = viewModel()) {
         Text("open map", Modifier.clickable { model.open(start) })
         if (model.isOpen(start)) FullScreenRouteMap(summary(), model) { model.close() }
     }
