@@ -39,14 +39,14 @@ Out, for now: Strava upload, Health Connect `ExerciseRoute`, miles, any change t
 - All user-facing text lives in `res/values/strings_glow_summary.xml` (`HardcodedEnglishTest`, `StringsParityTest`); the suite also runs with `-PtestLocale=de-DE`.
 - Splits stay per kilometre, as everywhere in the app.
 - `WorkoutMap`'s existing callers (the live map) behave exactly as before.
-- Full screen is a view that takes the page's place, like the share screen, with its open state kept in the page (`rememberSaveable`) and the tab bar hidden; not a separate window and not a navigation destination.
+- Full screen is a dialog over the page (its own window, so it covers the nav rail, the list pane and the bar on a wide screen), with all of its state (open, Route only, selected split) kept in the Route card with `rememberSaveable`, never inside the dialog, because state inside a dialog window is lost on rotation.
 
 ## Decisions and why
 
 - **Marker images, not text labels.** A text label on the map needs a font download from the tile host, which would break Route only's promise of no requests. Markers are small bitmaps added to the style, so they work offline. A style change (toggling Route only) drops them, so they are added again whenever the style is ready.
 - **`Route.legs` as the one source of kilometres.** The markers, the highlight and the Splits list all come from the same cut of the same smoothed track (`splits` becomes a view of `legs`), so the three can't disagree.
 - **The smoothed track in GPX, not raw fixes.** The file matches the distance and line the app shows. Elevation is GPS altitude as recorded (WGS84 ellipsoid); services that care re-derive it.
-- **In place, not a dialog.** A first version used a `Dialog`; on a device, rotating lost the selected split and the Route only choice and made the map pop open again, because state inside a Dialog window did not survive recreation (reproduced in `FullScreenRouteMapRotationTest`). The share screen's page-level flag is the model.
+- **Dialog, with the state outside it.** The first dialog kept its state inside and lost it on rotation (reproduced in `FullScreenRouteMapRotationTest`). Showing the map in place fixed that, but on a wide landscape screen it filled only the page's pane beside the tab list and the rail, so the dialog came back with the state held by the card.
 - **Share sheet, not a save dialog.** Consistent with sharing the story card, and it reaches Strava's and others' import without OpenStrap knowing about them.
 
 ## Known limits

@@ -153,12 +153,6 @@ fun GlowWorkoutSummaryScreen(
         WorkoutShareScreen(summary, hero, rewards?.earned.orEmpty(), liveRoute, workouts, contentPadding, onClose = { sharing = false })
         return
     }
-    // The full-screen route map takes the page's place too, its open state kept here so a rotation keeps it open.
-    var mapOpen by rememberSaveable { mutableStateOf(false) }
-    if (mapOpen && summary != null) {
-        FullScreenRouteMapScreen(summary) { mapOpen = false }
-        return
-    }
     val trim = summary?.let { rememberWorkoutTrim(it, onTrim, onUndoTrim) }
     // Share and Done stay on the bottom edge; Delete waits at the end of the page. Nothing to share until the workout
     // has loaded.
@@ -215,9 +209,7 @@ fun GlowWorkoutSummaryScreen(
         // What was done to the times, under the hero that says them.
         TrimNote(summary, trim.undo, Modifier.padding(horizontal = 4.dp), onCard = false)
         val weekStarts = remember(workouts) { goalWeekStarts(workouts) }
-        val sectionOnEdge = FamilySection(
-            family, summary, liveRoute, others, weekStarts, week = rewards?.week, onOpenMap = { mapOpen = true },
-        )
+        val sectionOnEdge = FamilySection(family, summary, liveRoute, others, weekStarts, week = rewards?.week)
         EarnedChips(earned)
         // The drop only with heart rate to show: recorded in the workout, or arriving live after it.
         val live = calmDown?.takeIf { it.start == w.start }

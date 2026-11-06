@@ -191,11 +191,6 @@ private fun PastSummary(
     val w = a.workout
     val list = rememberLazyListState()
     var info by rememberSaveable { mutableStateOf(false) }
-    var mapOpen by rememberSaveable { mutableStateOf(false) }
-    if (mapOpen) {
-        FullScreenRouteMapScreen(summary) { mapOpen = false }
-        return
-    }
     val others = remember(workouts, w.start) { workouts.filter { it.workout.start != w.start }.sortedByDescending { it.workout.start } }
     val usual = remember(others) { Workouts.usualLoad(others.map { it.workout.trainingLoad }) }
     val family = org.openstrap.app.ui.workout.FamilySummary.familyOf(w.sportType, summary.structure)
@@ -225,9 +220,7 @@ private fun PastSummary(
                         else SummaryHero(h.value, h.unit, h.figures, WorkoutDetailCopy.sentence(w.sportType, a.activeSeconds, w.trainingLoad, usual, zones.toList()), h.line)
                     }
                     SummaryHeroCard(hero, familyColor(family), Workouts.effort(w.trainingLoad, usual))
-                    val sectionOnEdge = FamilySection(
-                        family, summary, emptyList(), others, weekStarts, heartLine = false, onOpenMap = { mapOpen = true },
-                    )
+                    val sectionOnEdge = FamilySection(family, summary, emptyList(), others, weekStarts, heartLine = false)
                     // The heart rate card is lit from the left; under the section's own edge card it takes the bottom.
                     // Always there, even before any heart rate, since it holds Trim.
                     val heartEdge = if (sectionOnEdge) EdgeOverride(edge = Edge.Bottom) else EdgeOverride()
