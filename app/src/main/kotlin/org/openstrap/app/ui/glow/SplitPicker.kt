@@ -16,9 +16,12 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.semantics.selected
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.dp
+import org.openstrap.app.data.Route
 import org.openstrap.app.ui.components.pressClickable
 import org.openstrap.app.ui.theme.ControlSurface
+import org.openstrap.app.ui.workout.PhoneSummary
 import org.openstrap.app.ui.workout.SplitRow
+import org.openstrap.app.ui.workout.SummaryCopy
 
 /**
  * The Splits list's rows as chips along the full-screen map, name over time; the [selected] one lit white. Tapping a
@@ -45,3 +48,11 @@ internal fun SplitPicker(rows: List<SplitRow>, selected: Int?, onSelect: (Int?) 
         }
     }
 }
+
+/** The Splits list's rows along [route], one per [Route.legs] kilometre shown: the list and the map's picker share them. */
+internal fun splitRowsFor(summary: PhoneSummary, route: List<Route.Point>): List<SplitRow> = SummaryCopy.splitRows(
+    Route.splits(route, summary.pauses),
+    summary.history,
+    route.firstOrNull()?.t,
+    summary.distanceMeters?.takeIf { !summary.distanceFromSteps },
+)
