@@ -6,6 +6,7 @@ import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
 import org.openstrap.app.presentation.Ranges
 import androidx.activity.compose.BackHandler
+import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
@@ -175,12 +176,14 @@ private fun PastSummary(
     dayActiveKcal: Float?,
     onOpenDay: (() -> Unit)?,
     foundTag: Boolean,
+    routeMap: RouteMapModel = viewModel(),
 ) {
     val heartZones = LocalHeartZones.current
     val a = summary.analysis
     val w = a.workout
     val list = rememberLazyListState()
     var info by rememberSaveable { mutableStateOf(false) }
+    if (routeMap.isOpen(w.start)) FullScreenRouteMap(summary, routeMap) { routeMap.close() }
     val others = remember(workouts, w.start) { workouts.filter { it.workout.start != w.start }.sortedByDescending { it.workout.start } }
     val usual = remember(others) { Workouts.usualLoad(others.map { it.workout.trainingLoad }) }
     val family = org.openstrap.app.ui.workout.FamilySummary.familyOf(w.sportType, summary.structure)
@@ -210,7 +213,7 @@ private fun PastSummary(
                         else SummaryHero(h.value, h.unit, h.figures, WorkoutDetailCopy.sentence(w.sportType, a.activeSeconds, w.trainingLoad, usual, zones.toList()), h.line)
                     }
                     SummaryHeroCard(hero, mainZoneColor(zones, familyColor(family)), Workouts.effort(w.trainingLoad, usual))
-                    FamilySection(family, summary, emptyList(), others, weekStarts, heartLine = false)
+                    FamilySection(family, summary, emptyList(), others, weekStarts, heartLine = false, onOpenMap = { routeMap.open(w.start) })
                     // Always there, even before any heart rate, since it holds Trim.
                     HeartRateCard(a, trim)
                     val facts = WorkoutDetailCopy.facts(
