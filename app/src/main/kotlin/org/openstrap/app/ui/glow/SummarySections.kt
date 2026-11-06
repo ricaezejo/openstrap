@@ -5,6 +5,10 @@ import org.openstrap.app.data.Weeks
 import org.openstrap.app.i18n.Strings
 import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.runtime.setValue
 import org.openstrap.app.presentation.Ranges
 import org.openstrap.app.presentation.Units
 import org.openstrap.app.presentation.Pace
@@ -269,10 +273,12 @@ internal fun FamilySection(
 @Composable
 private fun RouteCard(summary: PhoneSummary) {
     if (!Route.mappable(summary.route)) return
+    var full by rememberSaveable { mutableStateOf(false) }
+    if (full) FullScreenRouteMap(summary) { full = false }
     EdgeCard(MetricColors.steps, Modifier.fillMaxWidth(), kind = EdgeKind.Earlier) {
         val climb = Route.climb(summary.route)?.let { stringResource(R.string.glow_summary_climb, Math.round(it)) }
         EdgeTitle(stringResource(R.string.glow_summary_route), climb)
-        RouteMap(summary, Modifier.padding(top = 12.dp))
+        RouteMap(summary, Modifier.padding(top = 12.dp), onOpen = { full = true })
     }
 }
 
