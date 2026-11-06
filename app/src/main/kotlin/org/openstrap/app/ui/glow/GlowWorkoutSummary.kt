@@ -340,13 +340,14 @@ internal fun RouteMap(summary: PhoneSummary, modifier: Modifier = Modifier, onOp
     if (!Route.mappable(summary.route)) return
     val stretches = rememberZoneStretches(summary)
     val open = stringResource(R.string.glow_summary_map_open)
-    val tap = if (onOpen == null) {
-        Modifier
-    } else {
-        Modifier.clickable(onClickLabel = open, onClick = onOpen).semantics { contentDescription = open }
-    }
-    Box(modifier.fillMaxWidth().height(170.dp).clip(GlowLayout.TileShape).background(Raised).then(tap)) {
+    Box(modifier.fillMaxWidth().height(170.dp).clip(GlowLayout.TileShape).background(Raised)) {
         WorkoutMap(stretches, routeOnly = false, Modifier.fillMaxSize())
+        // The live map takes touches itself, so a layer above it catches the tap: the card's map is a preview.
+        if (onOpen != null) {
+            Box(
+                Modifier.matchParentSize().clickable(onClickLabel = open, onClick = onOpen).semantics { contentDescription = open },
+            )
+        }
     }
 }
 
