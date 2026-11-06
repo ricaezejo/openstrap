@@ -25,16 +25,22 @@ object GpxWriter {
         sb.append("<gpx version=\"1.1\" creator=\"OpenStrap\" xmlns=\"http://www.topografix.com/GPX/1/1\" ")
         sb.append("xmlns:gpxtpx=\"http://www.garmin.com/xmlschemas/TrackPointExtension/v1\">\n")
         sb.append("<trk><name>").append(escape(name)).append("</name>\n")
-        val track = Route.track(points)
-
-        // Fixes recorded during a pause stay with what follows: one split where the pause begins, not one per fix.
-        fun paused(i: Int) = i > 0 && pauses.any { it.first < track[i].t && it.last > track[i - 1].t }
-        track.forEachIndexed { i, p ->
-            val prev = track.getOrNull(i - 1)
-            if (prev == null || (paused(i) && !paused(i - 1))) {
-                if (prev != null) sb.append("</trkseg>\n")
+        // Fixes strictly inside a pause are left out, so no line runs through it; a pause ends a segment.
+        var prev: Route.Point? = null
+        var gap = false
+        Route.track(points).forEach { p ->
+            if (pauses.any { p.t > it.first && p.t < it.last }) {
+                gap = true
+                return@forEach
+            }
+            val last = prev
+            val pausedBetween = last != null && pauses.any { it.first < p.t && it.last > last.t }
+            if (last == null || gap || pausedBetween) {
+                if (last != null) sb.append("</trkseg>\n")
                 sb.append("<trkseg>\n")
             }
+            prev = p
+            gap = false
             sb.append("<trkpt lat=\"").append(coord(p.lat)).append("\" lon=\"").append(coord(p.lon)).append("\">")
             p.altitude?.let { sb.append("<ele>").append(String.format(Locale.ROOT, "%.1f", it)).append("</ele>") }
             sb.append("<time>").append(Instant.ofEpochSecond(p.t)).append("</time>")
@@ -44,7 +50,7 @@ object GpxWriter {
             }
             sb.append("</trkpt>\n")
         }
-        if (track.isNotEmpty()) sb.append("</trkseg>\n")
+        if (prev != null) sb.append("</trkseg>\n")
         sb.append("</trk>\n</gpx>\n")
         return sb.toString()
     }

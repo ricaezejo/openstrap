@@ -39,6 +39,15 @@ class GpxWriterTest {
     @Test fun `a pause splits the track in two segments`() {
         val doc = parse(GpxWriter.write("Run", run(), emptyList(), listOf(start + 40..start + 60)))
         assertEquals(2, doc.all("trkseg").length)
+        val times = (0 until doc.all("time").length).map { Instant.parse(doc.all("time").item(it).textContent).epochSecond }
+        assertTrue(times.isNotEmpty() && times.none { it > start + 40 && it < start + 60 })
+        assertTrue(times.any { it <= start + 40 } && times.any { it >= start + 60 })
+    }
+
+    @Test fun `a pause between two fixes still splits the track`() {
+        val gap = (0..40).map { east(start + it, it * 3.0) } + (42..100).map { east(start + it, it * 3.0) }
+        val doc = parse(GpxWriter.write("Run", gap, emptyList(), listOf(start + 40..start + 42)))
+        assertEquals(2, doc.all("trkseg").length)
     }
 
     @Test fun `heart rate rides along when a reading is near`() {
