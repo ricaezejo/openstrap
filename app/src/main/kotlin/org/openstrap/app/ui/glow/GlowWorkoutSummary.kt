@@ -6,6 +6,7 @@ import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
 import org.openstrap.app.presentation.LoadBand
 import androidx.activity.compose.BackHandler
+import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.Canvas
@@ -114,6 +115,7 @@ fun GlowWorkoutSummaryScreen(
     /** What it earned ([RewardsCopy.summary]), null while it's worked out. */
     rewards: SummaryRewards? = null,
     celebrations: Celebrations? = null,
+    routeMap: RouteMapModel = viewModel(),
 ) {
     val a = summary?.analysis
     // Done goes through the celebrations it earned (workouts spec 3.4): a personal best's card, then the goal moment
@@ -143,6 +145,10 @@ fun GlowWorkoutSummaryScreen(
     }
     BackHandler(onBack = done)
     var info by rememberSaveable { mutableStateOf(false) }
+    // The full-screen route map is a dialog hosted here, with its state in a ViewModel (see RouteMapModel).
+    if (summary != null && routeMap.isOpen(summary.analysis.workout.start)) {
+        FullScreenRouteMap(summary, routeMap) { routeMap.close() }
+    }
     val hero = remember(summary, workouts) {
         if (summary == null || a == null) null
         else summaryHero(FamilySummary.familyOf(a.workout.sportType, summary.structure), summary, Workouts.usualLoad(workouts.filter { it.workout.start != a.workout.start }.map { it.workout.trainingLoad }))
@@ -209,7 +215,9 @@ fun GlowWorkoutSummaryScreen(
         // What was done to the times, under the hero that says them.
         TrimNote(summary, trim.undo, Modifier.padding(horizontal = 4.dp), onCard = false)
         val weekStarts = remember(workouts) { goalWeekStarts(workouts) }
-        val sectionOnEdge = FamilySection(family, summary, liveRoute, others, weekStarts, week = rewards?.week)
+        val sectionOnEdge = FamilySection(
+            family, summary, liveRoute, others, weekStarts, week = rewards?.week, onOpenMap = { routeMap.open(w.start) },
+        )
         EarnedChips(earned)
         // The drop only with heart rate to show: recorded in the workout, or arriving live after it.
         val live = calmDown?.takeIf { it.start == w.start }
