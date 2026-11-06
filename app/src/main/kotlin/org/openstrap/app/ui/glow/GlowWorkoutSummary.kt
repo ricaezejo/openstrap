@@ -6,10 +6,12 @@ import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
 import org.openstrap.app.presentation.LoadBand
 import androidx.activity.compose.BackHandler
+import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
@@ -33,6 +35,8 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.geometry.Offset
@@ -111,6 +115,7 @@ fun GlowWorkoutSummaryScreen(
     /** What it earned ([RewardsCopy.summary]), null while it's worked out. */
     rewards: SummaryRewards? = null,
     celebrations: Celebrations? = null,
+    routeMap: RouteMapModel = viewModel(),
 ) {
     val a = summary?.analysis
     // Done goes through the celebrations it earned (workouts spec 3.4): a personal best's card, then the goal moment
@@ -140,6 +145,10 @@ fun GlowWorkoutSummaryScreen(
     }
     BackHandler(onBack = done)
     var info by rememberSaveable { mutableStateOf(false) }
+    // The full-screen route map is a dialog hosted here, with its state in a ViewModel (see RouteMapModel).
+    if (summary != null && routeMap.isOpen(summary.analysis.workout.start)) {
+        FullScreenRouteMap(summary, routeMap) { routeMap.close() }
+    }
     val hero = remember(summary, workouts) {
         if (summary == null || a == null) null
         else summaryHero(FamilySummary.familyOf(a.workout.sportType, summary.structure), summary, Workouts.usualLoad(workouts.filter { it.workout.start != a.workout.start }.map { it.workout.trainingLoad }))
@@ -206,7 +215,9 @@ fun GlowWorkoutSummaryScreen(
         // What was done to the times, under the hero that says them.
         TrimNote(summary, trim.undo, Modifier.padding(horizontal = 4.dp), onCard = false)
         val weekStarts = remember(workouts) { goalWeekStarts(workouts) }
-        val sectionOnEdge = FamilySection(family, summary, liveRoute, others, weekStarts, week = rewards?.week)
+        val sectionOnEdge = FamilySection(
+            family, summary, liveRoute, others, weekStarts, week = rewards?.week, onOpenMap = { routeMap.open(w.start) },
+        )
         EarnedChips(earned)
         // The drop only with heart rate to show: recorded in the workout, or arriving live after it.
         val live = calmDown?.takeIf { it.start == w.start }
@@ -325,16 +336,23 @@ private fun DropLine(readings: List<Pair<Long, Int>>, end: Long, modifier: Modif
     }
 }
 
-/** The kept route in its zones' colours; nothing without a route that goes somewhere. */
+/**
+ * The kept route in its zones' colours; nothing without a route that goes somewhere. Tapping the map calls [onOpen]
+ * when it is given.
+ */
 @Composable
-internal fun RouteMap(summary: PhoneSummary, modifier: Modifier = Modifier) {
-    val heartZones = LocalHeartZones.current
+internal fun RouteMap(summary: PhoneSummary, modifier: Modifier = Modifier, onOpen: (() -> Unit)? = null) {
     if (!Route.mappable(summary.route)) return
-    val stretches = remember(summary, heartZones) {
-        Route.byZone(summary.route, summary.history, summary.analysis.maxHeartRate, heartZones)
-    }
+    val stretches = rememberZoneStretches(summary)
+    val open = stringResource(R.string.glow_summary_map_open)
     Box(modifier.fillMaxWidth().height(170.dp).clip(GlowLayout.TileShape).background(Raised)) {
         WorkoutMap(stretches, routeOnly = false, Modifier.fillMaxSize())
+        // The live map takes touches itself, so a layer above it catches the tap: the card's map is a preview.
+        if (onOpen != null) {
+            Box(
+                Modifier.matchParentSize().clickable(onClickLabel = open, onClick = onOpen).semantics { contentDescription = open },
+            )
+        }
     }
 }
 
@@ -402,9 +420,7 @@ internal fun SplitsList(summary: PhoneSummary, liveRoute: List<Route.Point>, mar
     val a = summary.analysis
     val maxHr = a.maxHeartRate
     val route = summary.route.ifEmpty { liveRoute.filter { it.t in a.shownStart..a.end } }
-    val rows = remember(route, summary) { SummaryCopy.splitRows(
-        Route.splits(route, summary.pauses), summary.history, route.firstOrNull()?.t, summary.distanceMeters?.takeIf { !summary.distanceFromSteps },
-    ) }
+    val rows = remember(route, summary) { splitRowsFor(summary, route) }
     val laps = summary.laps.takeIf { it.size > 1 }.orEmpty()
     val sets = summary.sets.filter { it.end != null }
     // Each row's heart takes the zone its average heart rate sat in.

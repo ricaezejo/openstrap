@@ -196,6 +196,7 @@ internal fun FamilySection(
     /** False on a past workout's page, whose heart rate card has the line already: the lines under it stay. */
     heartLine: Boolean = true,
     week: Rewards.WeekLine? = null,
+    onOpenMap: () -> Unit = {},
 ): Boolean {
     val heartZones = LocalHeartZones.current
     val a = summary.analysis
@@ -204,7 +205,7 @@ internal fun FamilySection(
     val zones = remember(a) { ZoneSeconds(a.zoneSeconds) }
     when (family) {
         Workouts.Family.Distance -> {
-            RouteCard(summary)
+            RouteCard(summary, onOpenMap)
             return SplitsList(summary, liveRoute, markFastest = true)
         }
         Workouts.Family.IndoorCardio -> {
@@ -267,12 +268,12 @@ internal fun FamilySection(
 
 /** The kept route in its zones' colours with the climb; nothing without a route that goes somewhere. */
 @Composable
-private fun RouteCard(summary: PhoneSummary) {
+private fun RouteCard(summary: PhoneSummary, onOpenMap: () -> Unit) {
     if (!Route.mappable(summary.route)) return
     EdgeCard(MetricColors.steps, Modifier.fillMaxWidth(), kind = EdgeKind.Earlier) {
         val climb = Route.climb(summary.route)?.let { stringResource(R.string.glow_summary_climb, Math.round(it)) }
         EdgeTitle(stringResource(R.string.glow_summary_route), climb)
-        RouteMap(summary, Modifier.padding(top = 12.dp))
+        RouteMap(summary, Modifier.padding(top = 12.dp), onOpen = onOpenMap)
     }
 }
 
