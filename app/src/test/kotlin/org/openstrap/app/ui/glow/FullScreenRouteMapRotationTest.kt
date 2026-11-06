@@ -1,6 +1,12 @@
 package org.openstrap.app.ui.glow
 
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.width
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.key
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.setValue
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.foundation.clickable
 import androidx.compose.material3.Text
@@ -10,10 +16,15 @@ import androidx.compose.ui.test.assertCountEquals
 import androidx.compose.ui.test.onAllNodesWithText
 import androidx.compose.ui.test.assertIsNotSelected
 import androidx.compose.ui.test.assertIsSelected
-import androidx.compose.ui.test.junit4.StateRestorationTester
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
+import androidx.compose.ui.unit.dp
+import androidx.lifecycle.ViewModelStore
+import androidx.lifecycle.ViewModelStoreOwner
+import androidx.lifecycle.viewmodel.compose.LocalViewModelStoreOwner
+import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.test.core.app.ApplicationProvider
+import org.openstrap.app.ui.components.ListDetail
 import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith
@@ -28,9 +39,12 @@ import org.robolectric.RobolectricTestRunner
 import org.robolectric.annotation.Config
 import org.robolectric.annotation.GraphicsMode
 
-/** Rotating the phone saves the page's state and builds it again from that: the full-screen map must come back open, as it was. */
+/**
+ * The map's state through what a real device does: the page moves between the phone's stack and the wide screen's pane
+ * (different places in the layout tree), and a rotation builds everything again around the same ViewModelStore.
+ */
 @RunWith(RobolectricTestRunner::class)
-@Config(sdk = [35], qualifiers = "w411dp-h891dp-port")
+@Config(sdk = [35], qualifiers = "w900dp-h891dp")
 @GraphicsMode(GraphicsMode.Mode.NATIVE)
 class FullScreenRouteMapRotationTest {
     @get:Rule val rules = ComposeRules()
@@ -50,12 +64,6 @@ class FullScreenRouteMapRotationTest {
     private fun km(n: Int) = app.getString(R.string.workout_summary_split_km, n)
     private val last get() = text(R.string.workout_summary_split_last).substringBefore('%')
 
-    private fun rotating(content: @Composable () -> Unit): StateRestorationTester {
-        val tester = StateRestorationTester(rules.compose)
-        tester.setContent { CompositionLocalProvider(LocalInspectionMode provides true) { content() } }
-        return tester
-    }
-
     private fun assertOnlyKm2Selected() {
         rules.compose.onNodeWithText(km(2)).assertIsSelected()
         rules.compose.onNodeWithText(km(1)).assertIsNotSelected()
@@ -63,28 +71,57 @@ class FullScreenRouteMapRotationTest {
         rules.compose.onNodeWithText(last, substring = true).assertIsNotSelected()
     }
 
-    /** The Route card's part: the state outside the dialog, a toggle to open it, and the dialog while open. */
-    @Composable private fun Page(summary: PhoneSummary) {
-        val state = rememberRouteMapState()
-        Text("open map", Modifier.clickable { state.open = true })
-        if (state.open) FullScreenRouteMap(summary, state) { state.open = false }
+    private val store = ViewModelStore()
+    private val owner = object : ViewModelStoreOwner { override val viewModelStore = store }
+    private var wide by mutableStateOf(false)
+    private var generation by mutableStateOf(0)
+
+    /** The workout page as a pane or a stack page, hosting the map as the real pages do. */
+    @Composable private fun Page() {
+        val model = viewModel<RouteMapModel>()
+        Text("open map", Modifier.clickable { model.open(start) })
+        if (model.isOpen(start)) FullScreenRouteMap(summary(), model) { model.close() }
     }
 
-    @Test fun `the dialog stays open with its split and Route only through a rotation`() {
-        val tester = rotating { Page(summary()) }
+    private fun host() = rules.compose.setContent {
+        CompositionLocalProvider(LocalInspectionMode provides true, LocalViewModelStoreOwner provides owner) {
+            key(generation) {
+                Box(Modifier.width(if (wide) 800.dp else 400.dp)) {
+                    ListDetail("p", { true }, { listOf("p") }, 720.dp, detail = { Page() }, list = { Text("list") })
+                }
+            }
+        }
+    }
+
+    private fun layout(isWide: Boolean) { wide = isWide; rules.compose.waitForIdle() }
+    private fun rotate() { generation++; rules.compose.waitForIdle() }
+    private fun assertClosed() = rules.compose.onAllNodesWithText(text(R.string.glow_summary_map_close)).assertCountEquals(0)
+
+    @Test fun `an open map keeps its split and Route only across layouts and rotations`() {
+        host()
         rules.compose.onNodeWithText("open map").performClick()
         rules.compose.onNodeWithText(km(2)).performClick()
         rules.compose.onNodeWithText(text(R.string.glow_summary_map_route_only)).performClick()
-        assertOnlyKm2Selected()
-        tester.emulateSavedInstanceStateRestore()
+        layout(true)
         assertOnlyKm2Selected()
         rules.compose.onNodeWithText(text(R.string.glow_summary_map_show_map)).assertExists()
+        rotate()
+        assertOnlyKm2Selected()
+        layout(false)
+        assertOnlyKm2Selected()
     }
 
-    @Test fun `the close pill closes the dialog`() {
-        rotating { Page(summary()) }
+    @Test fun `a closed map stays closed across layouts and rotations`() {
+        host()
+        layout(true)
         rules.compose.onNodeWithText("open map").performClick()
         rules.compose.onNodeWithText(text(R.string.glow_summary_map_close)).performClick()
-        rules.compose.onAllNodesWithText(text(R.string.glow_summary_map_close)).assertCountEquals(0)
+        assertClosed()
+        layout(false)
+        assertClosed()
+        layout(true)
+        assertClosed()
+        rotate()
+        assertClosed()
     }
 }
