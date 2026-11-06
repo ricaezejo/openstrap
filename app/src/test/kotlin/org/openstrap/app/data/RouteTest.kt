@@ -75,6 +75,36 @@ class RouteTest {
     }
 
     @Test
+    fun `legs cut the track at each kilometre`() {
+        val legs = Route.legs(run(1200))
+        assertEquals(4, legs.size)
+        for (i in 0..2) assertEquals(1000.0, legs[i].points.zipWithNext().sumOf { (a, b) -> Route.meters(a, b) }, 15.0)
+        for (i in 0 until legs.lastIndex) assertEquals(legs[i].points.last(), legs[i + 1].points.first())
+    }
+
+    @Test
+    fun `legs and splits agree`() {
+        assertEquals(Route.splits(run(1200)), Route.legs(run(1200)).map { it.split })
+    }
+
+    @Test
+    fun `a run under a kilometre is one part leg`() {
+        val legs = Route.legs(run(100))
+        assertEquals(1, legs.size)
+        assertTrue(legs[0].split.meters < 1000.0)
+    }
+
+    @Test
+    fun `a pause stays out of a leg's metres`() {
+        val pauses = listOf(500L..600L)
+        val legs = Route.legs(run(1200), pauses)
+        val leg = legs.single { it.points.first().t < 550 && it.points.last().t > 550 }
+        assertEquals(1000.0, leg.split.meters, 15.0)
+        val whole = Route.legs(run(1200)).sumOf { it.split.meters }
+        assertEquals(whole - 300.0, legs.sumOf { it.split.meters }, 15.0)
+    }
+
+    @Test
     fun currentPace() {
         assertEquals(333.0, Route.currentPace(run(100))!!, 2.0)
     }
