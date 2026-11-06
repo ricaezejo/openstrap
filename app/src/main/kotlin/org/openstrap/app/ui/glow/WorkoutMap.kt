@@ -36,6 +36,7 @@ import org.maplibre.android.style.layers.CircleLayer
 import org.maplibre.android.style.layers.LineLayer
 import org.maplibre.android.style.layers.Property
 import org.maplibre.android.style.layers.PropertyFactory
+import org.maplibre.android.style.layers.SymbolLayer
 import org.maplibre.android.style.sources.GeoJsonSource
 import org.openstrap.app.data.Route
 import org.openstrap.app.ui.workout.ZONE_COLORS
@@ -56,8 +57,11 @@ private const val BLANK_STYLE = """{"version":8,"sources":{},"layers":[{"id":"bg
  * line's end, ringed in [hereColor] when given; the start is a hollow dot. [routeOnly] loads no map tiles: the tile
  * server never learns where the map is. While [follow], the camera fits the whole route as it grows inside
  * [fitPadding] (clear of what's drawn over the map), or centres on the dot until then; a drag on the map calls
- * [onPanned], so the caller can stop following.
+ * [onPanned], so the caller can stop following. [kmMarkers] puts a numbered circle at each kilometre's end; a
+ * [highlight] of two or more points is drawn with a white casing under the line, and fitted instead of the route.
  */
+// Callers remember their lists, so a stable list type wouldn't let this skip any more often.
+@Suppress("UnstableCollections", "ComposeUnstableCollections")
 @Composable
 fun WorkoutMap(
     stretches: List<Pair<List<Route.Point>, Int>>, routeOnly: Boolean, modifier: Modifier = Modifier, here: Route.Point? = null,
@@ -67,6 +71,8 @@ fun WorkoutMap(
     hereColor: Color? = null,
     follow: Boolean = true,
     onPanned: () -> Unit = {},
+    kmMarkers: List<Pair<Int, Route.Point>> = emptyList(),
+    highlight: List<Route.Point> = emptyList(),
 ) {
     // A preview or a layout test has no native map library: the route only map's black stands in for it.
     if (LocalInspectionMode.current) {
@@ -91,10 +97,7 @@ fun WorkoutMap(
                 m.setMaxZoomPreference(MAX_ZOOM)
                 // MapLibre's licence doesn't ask for its logo; the ⓘ stays, for the OpenStreetMap credit the tiles need.
                 m.uiSettings.isLogoEnabled = false
-                // In the bottom-right corner, inset to clear the card's rounded edge.
-                val inset = (18 * context.resources.displayMetrics.density).toInt()
                 m.uiSettings.attributionGravity = android.view.Gravity.BOTTOM or android.view.Gravity.END
-                m.uiSettings.setAttributionMargins(0, 0, inset, with(density) { creditBottom.roundToPx() })
                 m.addOnCameraMoveStartedListener { reason ->
                     if (reason == MapLibreMap.OnCameraMoveStartedListener.REASON_API_GESTURE) panned()
                 }
@@ -118,6 +121,11 @@ fun WorkoutMap(
             view.onDestroy()
         }
     }
+    // In the bottom-right corner, inset to clear the card's rounded edge; set again when what's under it changes height.
+    LaunchedEffect(map, creditBottom) {
+        val inset = (18 * context.resources.displayMetrics.density).toInt()
+        map?.uiSettings?.setAttributionMargins(0, 0, inset, with(density) { creditBottom.roundToPx() })
+    }
     LaunchedEffect(map, routeOnly) {
         val m = map ?: return@LaunchedEffect
         style = null
@@ -126,6 +134,8 @@ fun WorkoutMap(
             s.addSource(GeoJsonSource(SOURCE, geoJson(emptyList())))
             s.addSource(GeoJsonSource(HERE, geoJson(emptyList())))
             s.addSource(GeoJsonSource(START, geoJson(emptyList())))
+            s.addSource(GeoJsonSource(KM_SRC, geoJson(emptyList())))
+            s.addSource(GeoJsonSource(HIGHLIGHT_SRC, geoJson(emptyList())))
             s.addLayer(
                 CircleLayer(START_DOT, START).withProperties(
                     PropertyFactory.circleRadius(5f),
@@ -140,6 +150,22 @@ fun WorkoutMap(
                     PropertyFactory.lineWidth(5f),
                     PropertyFactory.lineCap(Property.LINE_CAP_ROUND),
                     PropertyFactory.lineJoin(Property.LINE_JOIN_ROUND),
+                ),
+            )
+            s.addLayerBelow(
+                LineLayer(HIGHLIGHT_LINE, HIGHLIGHT_SRC).withProperties(
+                    PropertyFactory.lineColor(Color.White.toArgb()),
+                    PropertyFactory.lineWidth(HIGHLIGHT_WIDTH),
+                    PropertyFactory.lineCap(Property.LINE_CAP_ROUND),
+                    PropertyFactory.lineJoin(Property.LINE_JOIN_ROUND),
+                ),
+                LINE,
+            )
+            s.addLayer(
+                SymbolLayer(KM_LAYER, KM_SRC).withProperties(
+                    PropertyFactory.iconImage(Expression.get("icon")),
+                    PropertyFactory.iconAllowOverlap(true),
+                    PropertyFactory.iconIgnorePlacement(true),
                 ),
             )
             s.addLayer(
@@ -168,7 +194,12 @@ fun WorkoutMap(
             ).toTypedArray(),
         )
     }
-    LaunchedEffect(style, stretches, here, follow) {
+    // Again for each new style: switching Route only replaces the style, and its images with it.
+    LaunchedEffect(style, kmMarkers) { style?.showKmMarkers(kmMarkers, density.density) }
+    LaunchedEffect(style, highlight) {
+        style?.getSourceAs<GeoJsonSource>(HIGHLIGHT_SRC)?.setGeoJson(highlightGeoJson(highlight))
+    }
+    LaunchedEffect(style, stretches, here, follow, highlight) {
         val s = style ?: return@LaunchedEffect
         s.getSourceAs<GeoJsonSource>(SOURCE)?.setGeoJson(geoJson(stretches))
         val last = here ?: stretches.lastOrNull()?.first?.lastOrNull()
@@ -176,8 +207,9 @@ fun WorkoutMap(
         val all = stretches.flatMap { it.first }
         s.getSourceAs<GeoJsonSource>(START)?.setGeoJson(point(all.firstOrNull()?.takeIf { all.size >= 2 }))
         if (!follow) return@LaunchedEffect
-        if (all.size >= 2) {
-            val bounds = LatLngBounds.Builder().includes(all.map { LatLng(it.lat, it.lon) }).build()
+        val fit = fitTo(highlight, all)
+        if (fit.size >= 2) {
+            val bounds = LatLngBounds.Builder().includes(fit.map { LatLng(it.lat, it.lon) }).build()
             val px = with(density) { listOf(fitPadding.calculateLeftPadding(LayoutDirection.Ltr), fitPadding.calculateTopPadding(), fitPadding.calculateRightPadding(LayoutDirection.Ltr), fitPadding.calculateBottomPadding()).map { it.roundToPx() } }
             runCatching { map?.easeCamera(CameraUpdateFactory.newLatLngBounds(bounds, px[0], px[1], px[2], px[3])) }
         } else if (last != null) {
@@ -197,13 +229,37 @@ private const val DOT = "here-dot"
 private const val HALO = "here-halo"
 private const val START = "start"
 private const val START_DOT = "start-dot"
+private const val KM_SRC = "km"
+private const val KM_LAYER = "km-markers"
+private const val HIGHLIGHT_SRC = "highlight"
+private const val HIGHLIGHT_LINE = "highlight-line"
+
+/** Twice the route line's width, so the casing shows on both sides of it. */
+private const val HIGHLIGHT_WIDTH = 10f
+
+/** Each marker's image, then the markers: the style has no images of its own, and a new style drops added ones. */
+private fun Style.showKmMarkers(markers: List<Pair<Int, Route.Point>>, density: Float) {
+    markers.forEach { (km, _) -> addImage("km-$km", kmMarkerBitmap(km, density)) }
+    getSourceAs<GeoJsonSource>(KM_SRC)?.setGeoJson(kmMarkerFeatures(markers))
+}
 
 /** One point as GeoJSON, or nothing. */
 private fun point(p: Route.Point?): String =
     p?.let { """{"type":"Feature","geometry":{"type":"Point","coordinates":[${coord(it)}]},"properties":{}}""" }
         ?: """{"type":"FeatureCollection","features":[]}"""
 
-private fun coord(p: Route.Point) = String.format(Locale.ROOT, "%.7f,%.7f", p.lon, p.lat)
+internal fun coord(p: Route.Point) = String.format(Locale.ROOT, "%.7f,%.7f", p.lon, p.lat)
+
+/** What the camera fits: the [highlight] when it can be drawn, else the whole route. */
+private fun fitTo(highlight: List<Route.Point>, all: List<Route.Point>) = if (highlight.size >= 2) highlight else all
+
+/** [points] as one LineString feature, or none under two points. */
+internal fun highlightGeoJson(points: List<Route.Point>): String = if (points.size < 2) {
+    """{"type":"FeatureCollection","features":[]}"""
+} else {
+    """{"type":"FeatureCollection","features":[{"type":"Feature","properties":{},"geometry":{"type":"LineString","coordinates":[""" +
+        points.joinToString(",") { "[${coord(it)}]" } + "]}}]}"
+}
 
 /** Each stretch a LineString feature with its zone's colour (grey without heart rate). */
 private fun geoJson(stretches: List<Pair<List<Route.Point>, Int>>): String = buildString {

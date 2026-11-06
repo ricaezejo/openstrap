@@ -321,24 +321,33 @@ object Route {
     }
 
     /** Per-kilometre splits along [points]; the last one may be partial. Paused time doesn't count. */
-    fun splits(points: List<Point>, pauses: List<LongRange> = emptyList(), km: Double = 1000.0): List<Split> {
+    fun splits(points: List<Point>, pauses: List<LongRange> = emptyList(), km: Double = 1000.0): List<Split> =
+        legs(points, pauses, km).map { it.split }
+
+    /** One kilometre's [split] with the smoothed track [points] it covers, from the previous leg's last point. */
+    data class Leg(val split: Split, val points: List<Point>)
+
+    /** The kilometres of [splits], each with its stretch of the smoothed track; paused stretches are left out. */
+    fun legs(points: List<Point>, pauses: List<LongRange> = emptyList(), km: Double = 1000.0): List<Leg> {
         val clean = track(points)
-        val out = mutableListOf<Split>()
-        var startT = clean.firstOrNull()?.t ?: return out
+        val out = mutableListOf<Leg>()
+        val current = mutableListOf(clean.firstOrNull() ?: return out)
         var meters = 0.0
         var seconds = 0L
         clean.zipWithNext().forEach { (a, b) ->
             if (paused(a, b, pauses)) return@forEach
             meters += meters(a, b)
             seconds += b.t - a.t
+            current += b
             if (meters >= km) {
-                out += Split(out.size, b.t, seconds, meters)
+                out += Leg(Split(out.size, b.t, seconds, meters), current.toList())
+                current.clear()
+                current += b
                 meters = 0.0
                 seconds = 0
-                startT = b.t
             }
         }
-        if (meters > 0) out += Split(out.size, clean.last().t, seconds, meters)
+        if (meters > 0) out += Leg(Split(out.size, clean.last().t, seconds, meters), current)
         return out
     }
 
