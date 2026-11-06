@@ -2,6 +2,9 @@ package org.openstrap.app.ui.glow
 
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.platform.LocalInspectionMode
 import androidx.compose.ui.test.assertIsNotSelected
 import androidx.compose.ui.test.assertIsSelected
@@ -9,6 +12,7 @@ import androidx.compose.ui.test.junit4.StateRestorationTester
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
 import androidx.test.core.app.ApplicationProvider
+import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
 import org.junit.Rule
 import org.junit.Test
@@ -83,10 +87,16 @@ class FullScreenRouteMapRotationTest {
         rules.compose.onNodeWithText(text(R.string.glow_summary_map_show_map)).assertExists()
     }
 
-    @Test fun `the screen hides the tab bar while it is shown`() {
+    @Test fun `the screen hides the tab bar while it is shown and gives it back when it closes`() {
         var hidden = false
-        rotating { CompositionLocalProvider(LocalHideTabBar provides { hidden = it }) { FullScreenRouteMapScreen(summary()) {} } }
+        var show by mutableStateOf(true)
+        rotating {
+            CompositionLocalProvider(LocalHideTabBar provides { hidden = it }) { if (show) FullScreenRouteMapScreen(summary()) {} }
+        }
         rules.compose.waitForIdle()
         assertTrue(hidden)
+        show = false
+        rules.compose.waitForIdle()
+        assertFalse(hidden)
     }
 }
