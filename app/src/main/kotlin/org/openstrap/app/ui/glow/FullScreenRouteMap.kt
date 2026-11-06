@@ -1,6 +1,5 @@
 package org.openstrap.app.ui.glow
 
-import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.PaddingValues
@@ -11,10 +10,12 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.safeDrawing
 import androidx.compose.foundation.layout.windowInsetsPadding
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.DisposableEffect
+import androidx.compose.runtime.SideEffect
+import androidx.compose.runtime.Stable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.saveable.listSaver
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
@@ -22,8 +23,12 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.platform.LocalView
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.window.Dialog
+import androidx.compose.ui.window.DialogProperties
+import androidx.compose.ui.window.DialogWindowProvider
 import org.openstrap.app.R
 import org.openstrap.app.data.Route
 import org.openstrap.app.ui.dashboard.LocalHeartZones
@@ -39,18 +44,44 @@ internal fun rememberZoneStretches(summary: PhoneSummary): List<Pair<List<Route.
 }
 
 /**
- * The route map as a view that takes the page's place, like the share screen: no window of its own, so its state saves
- * and restores with the page's. The tab bar is hidden while it shows; Back or [onClose] closes it.
+ * What the full-screen map keeps through a rotation: whether it is open, Route only and the selected split. It lives in
+ * the Route card, never inside the dialog: `rememberSaveable` inside a dialog's window is lost when the activity is
+ * recreated.
  */
-@Composable
-internal fun FullScreenRouteMapScreen(summary: PhoneSummary, onClose: () -> Unit) {
-    BackHandler(onBack = onClose)
-    val hideTabBar = LocalHideTabBar.current
-    DisposableEffect(Unit) {
-        hideTabBar(true)
-        onDispose { hideTabBar(false) }
+@Stable
+internal class RouteMapState {
+    var open by mutableStateOf(false)
+    var routeOnly by mutableStateOf(false)
+    var selected by mutableStateOf<Int?>(null)
+
+    companion object {
+        val Saver = listSaver<RouteMapState, Any?>(
+            save = { listOf(it.open, it.routeOnly, it.selected) },
+            restore = { RouteMapState().apply { open = it[0] as Boolean; routeOnly = it[1] as Boolean; selected = it[2] as Int? } },
+        )
     }
-    FullScreenRouteMapContent(summary, onClose)
+}
+
+@Composable
+internal fun rememberRouteMapState(): RouteMapState = rememberSaveable(saver = RouteMapState.Saver) { RouteMapState() }
+
+/** The route map over the whole screen, in its own window so it covers the rail, the panes and the bars; Back or [onClose] closes it. */
+@Composable
+internal fun FullScreenRouteMap(summary: PhoneSummary, state: RouteMapState, onClose: () -> Unit) {
+    Dialog(
+        onDismissRequest = onClose,
+        properties = DialogProperties(usePlatformDefaultWidth = false, decorFitsSystemWindows = false),
+    ) {
+        NoWindowAnimation()
+        FullScreenRouteMapContent(summary, state, onClose)
+    }
+}
+
+/** A rotation builds the dialog again, so its window's entrance animation would show the map popping open once more. */
+@Composable
+private fun NoWindowAnimation() {
+    val window = (LocalView.current.parent as? DialogWindowProvider)?.window
+    SideEffect { window?.setWindowAnimations(-1) }
 }
 
 /**
@@ -59,14 +90,14 @@ internal fun FullScreenRouteMapScreen(summary: PhoneSummary, onClose: () -> Unit
  * bottom draws the chosen kilometre with a white casing and fits it.
  */
 @Composable
-internal fun FullScreenRouteMapContent(summary: PhoneSummary, onClose: () -> Unit) {
+internal fun FullScreenRouteMapContent(summary: PhoneSummary, state: RouteMapState, onClose: () -> Unit) {
     val stretches = rememberZoneStretches(summary)
-    var routeOnly by rememberSaveable { mutableStateOf(false) }
+    val routeOnly = state.routeOnly
     var follow by remember { mutableStateOf(true) }
     val legs = remember(summary) { Route.legs(summary.route, summary.pauses) }
     val kmMarkers = remember(legs) { legs.filter { it.split.meters >= 1000.0 }.map { it.split.index + 1 to it.points.last() } }
     val rows = remember(summary) { splitRowsFor(summary, summary.route) }
-    var selected by rememberSaveable { mutableStateOf<Int?>(null) }
+    val selected = state.selected
     var pickerHeight by remember { mutableStateOf(0.dp) }
     val density = LocalDensity.current
     // From the screen's bottom edge to the picker's top, so the fitted route and the map's credit stay above it.
@@ -85,7 +116,7 @@ internal fun FullScreenRouteMapContent(summary: PhoneSummary, onClose: () -> Uni
         )
         Box(Modifier.fillMaxSize().windowInsetsPadding(WindowInsets.safeDrawing).padding(12.dp)) {
             val routeOnlyLabel = if (routeOnly) R.string.glow_summary_map_show_map else R.string.glow_summary_map_route_only
-            IconPill(stringResource(routeOnlyLabel), { routeOnly = !routeOnly }, Modifier.align(Alignment.TopStart))
+            IconPill(stringResource(routeOnlyLabel), { state.routeOnly = !routeOnly }, Modifier.align(Alignment.TopStart))
             if (!follow) {
                 IconPill(stringResource(R.string.glow_summary_map_fit), { follow = true }, Modifier.align(Alignment.TopCenter))
             }
@@ -95,7 +126,7 @@ internal fun FullScreenRouteMapContent(summary: PhoneSummary, onClose: () -> Uni
                     rows,
                     selected,
                     onSelect = {
-                        selected = it
+                        state.selected = it
                         follow = true
                     },
                     Modifier.align(Alignment.BottomStart).onSizeChanged { pickerHeight = with(density) { it.height.toDp() } },

@@ -2,18 +2,18 @@ package org.openstrap.app.ui.glow
 
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.setValue
+import androidx.compose.foundation.clickable
+import androidx.compose.material3.Text
+import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalInspectionMode
+import androidx.compose.ui.test.assertCountEquals
+import androidx.compose.ui.test.onAllNodesWithText
 import androidx.compose.ui.test.assertIsNotSelected
 import androidx.compose.ui.test.assertIsSelected
 import androidx.compose.ui.test.junit4.StateRestorationTester
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
 import androidx.test.core.app.ApplicationProvider
-import org.junit.Assert.assertFalse
-import org.junit.Assert.assertTrue
 import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith
@@ -28,7 +28,7 @@ import org.robolectric.RobolectricTestRunner
 import org.robolectric.annotation.Config
 import org.robolectric.annotation.GraphicsMode
 
-/** Rotating the phone saves the screen's state and builds it again from that: the full-screen map must come back as it was. */
+/** Rotating the phone saves the page's state and builds it again from that: the full-screen map must come back open, as it was. */
 @RunWith(RobolectricTestRunner::class)
 @Config(sdk = [35], qualifiers = "w411dp-h891dp-port")
 @GraphicsMode(GraphicsMode.Mode.NATIVE)
@@ -63,40 +63,28 @@ class FullScreenRouteMapRotationTest {
         rules.compose.onNodeWithText(last, substring = true).assertIsNotSelected()
     }
 
-    @Test fun `the content keeps the selected split through a rotation`() {
-        val tester = rotating { FullScreenRouteMapContent(summary()) {} }
-        rules.compose.onNodeWithText(km(2)).performClick()
-        assertOnlyKm2Selected()
-        tester.emulateSavedInstanceStateRestore()
-        assertOnlyKm2Selected()
+    /** The Route card's part: the state outside the dialog, a toggle to open it, and the dialog while open. */
+    @Composable private fun Page(summary: PhoneSummary) {
+        val state = rememberRouteMapState()
+        Text("open map", Modifier.clickable { state.open = true })
+        if (state.open) FullScreenRouteMap(summary, state) { state.open = false }
     }
 
-    @Test fun `the screen keeps the selected split through a rotation`() {
-        val tester = rotating { FullScreenRouteMapScreen(summary()) {} }
+    @Test fun `the dialog stays open with its split and Route only through a rotation`() {
+        val tester = rotating { Page(summary()) }
+        rules.compose.onNodeWithText("open map").performClick()
         rules.compose.onNodeWithText(km(2)).performClick()
-        assertOnlyKm2Selected()
-        tester.emulateSavedInstanceStateRestore()
-        assertOnlyKm2Selected()
-    }
-
-    @Test fun `the screen keeps Route only through a rotation`() {
-        val tester = rotating { FullScreenRouteMapScreen(summary()) {} }
         rules.compose.onNodeWithText(text(R.string.glow_summary_map_route_only)).performClick()
-        rules.compose.onNodeWithText(text(R.string.glow_summary_map_show_map)).assertExists()
+        assertOnlyKm2Selected()
         tester.emulateSavedInstanceStateRestore()
+        assertOnlyKm2Selected()
         rules.compose.onNodeWithText(text(R.string.glow_summary_map_show_map)).assertExists()
     }
 
-    @Test fun `the screen hides the tab bar while it is shown and gives it back when it closes`() {
-        var hidden = false
-        var show by mutableStateOf(true)
-        rotating {
-            CompositionLocalProvider(LocalHideTabBar provides { hidden = it }) { if (show) FullScreenRouteMapScreen(summary()) {} }
-        }
-        rules.compose.waitForIdle()
-        assertTrue(hidden)
-        show = false
-        rules.compose.waitForIdle()
-        assertFalse(hidden)
+    @Test fun `the close pill closes the dialog`() {
+        rotating { Page(summary()) }
+        rules.compose.onNodeWithText("open map").performClick()
+        rules.compose.onNodeWithText(text(R.string.glow_summary_map_close)).performClick()
+        rules.compose.onAllNodesWithText(text(R.string.glow_summary_map_close)).assertCountEquals(0)
     }
 }
