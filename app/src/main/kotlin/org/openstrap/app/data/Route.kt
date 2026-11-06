@@ -417,5 +417,5 @@ object Route {
         return out.filter { it.first.size >= 2 }
     }
 
-    private const val MAX_HR_GAP_S = 30L
+    const val MAX_HR_GAP_S = 30L
 }

@@ -93,6 +93,10 @@
 
     <!-- Title of the card with the workout's route on a map. One word. -->
     <string name="glow_summary_route">Route</string>
+    <!-- Button on the route card: hands the route to another app as a GPX file. One word. -->
+    <string name="glow_summary_export">Export</string>
+    <!-- Toast when the route's file couldn't be written. -->
+    <string name="glow_summary_export_failed">Couldn\'t export the route</string>
     <!-- Beside the route's title: how far it climbed, in metres. -->
     <string name="glow_summary_climb">Climb <xliff:g id="meters" example="42">%1$d</xliff:g> m</string>
     <!-- Content description of the route card's map: tapping it opens the map full screen. -->
