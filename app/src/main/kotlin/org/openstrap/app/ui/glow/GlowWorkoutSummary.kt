@@ -405,6 +405,14 @@ internal fun ZonesList(zones: ZoneSeconds, maxHr: Int, note: String = stringReso
     }
 }
 
+/** The Splits list's rows along [route], one per [Route.legs] kilometre shown: the list and the map's picker share them. */
+internal fun splitRowsFor(summary: PhoneSummary, route: List<Route.Point>): List<SplitRow> = SummaryCopy.splitRows(
+    Route.splits(route, summary.pauses),
+    summary.history,
+    route.firstOrNull()?.t,
+    summary.distanceMeters?.takeIf { !summary.distanceFromSteps },
+)
+
 /**
  * Splits for a GPS workout (each kilometre's time and average heart rate), with the laps under them when any were
  * marked; laps alone without GPS; sets for strength. Nothing without any of them. With [markFastest] the fastest
@@ -416,9 +424,7 @@ internal fun SplitsList(summary: PhoneSummary, liveRoute: List<Route.Point>, mar
     val a = summary.analysis
     val maxHr = a.maxHeartRate
     val route = summary.route.ifEmpty { liveRoute.filter { it.t in a.shownStart..a.end } }
-    val rows = remember(route, summary) { SummaryCopy.splitRows(
-        Route.splits(route, summary.pauses), summary.history, route.firstOrNull()?.t, summary.distanceMeters?.takeIf { !summary.distanceFromSteps },
-    ) }
+    val rows = remember(route, summary) { splitRowsFor(summary, route) }
     val laps = summary.laps.takeIf { it.size > 1 }.orEmpty()
     val sets = summary.sets.filter { it.end != null }
     // Each row's heart takes the zone its average heart rate sat in.
