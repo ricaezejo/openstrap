@@ -7,6 +7,8 @@
     <ID>AbstractClassCanBeInterface:FetchAssembler.kt:FetchAssembler.State$State</ID>
     <ID>AbstractClassCanBeInterface:FetchCodec.kt:GdspMessage$GdspMessage</ID>
     <ID>AbstractClassCanBeInterface:RecordParsers.kt:ParseResult$ParseResult</ID>
+    <ID>AnnotationOnSeparateLine:DfuSession.kt:DfuSession$@Suppress("UNREACHABLE_CODE") error("unreachable")</ID>
+    <ID>AnnotationOnSeparateLine:GdspClient.kt:GdspClient$@Suppress("UNREACHABLE_CODE") null</ID>
     <ID>ComplexCondition:SportSession.kt:SportSession$reply.size &lt; 4 || reply.u8(0) != REPLY || reply.u8(1) != VERSION || reply.u8(2) != 1</ID>
     <ID>CyclomaticComplexMethod:Settings.kt:SettingsCodec$fun parse: SettingsGroup?</ID>
     <ID>EmptyElseBlock:Services.kt:RealtimeSteps$if (r.remaining &lt; 4) return StepTotals(steps, null, null)</ID>
@@ -22,6 +24,7 @@
     <ID>ImplicitDefaultLocale:DfuSession.kt:DfuSession$"Unexpected reply to %02X".format(cmd)</ID>
     <ID>ImplicitDefaultLocale:GdspClient.kt:GdspClient$"%02x %s".format(it.opcode, it.status)</ID>
     <ID>ImplicitDefaultLocale:GdspClient.kt:GdspTimeoutException$"no reply to GDSP command %02x".format(op)</ID>
+    <ID>ImportOrdering:ChannelSession.kt:import kotlinx.coroutines.CoroutineScope import kotlinx.coroutines.CoroutineStart import kotlinx.coroutines.async import kotlinx.coroutines.coroutineScope import kotlinx.coroutines.Job import kotlinx.coroutines.channels.BufferOverflow import kotlinx.coroutines.flow.Flow import kotlinx.coroutines.flow.MutableSharedFlow import kotlinx.coroutines.flow.SharedFlow import kotlinx.coroutines.flow.filter import kotlinx.coroutines.flow.first import kotlinx.coroutines.flow.mapNotNull import kotlinx.coroutines.launch import kotlinx.coroutines.sync.Mutex import kotlinx.coroutines.sync.withLock import kotlinx.coroutines.withTimeoutOrNull import org.openstrap.protocol.auth.Auth import org.openstrap.protocol.auth.AuthException import org.openstrap.protocol.auth.AuthHandshake import org.openstrap.protocol.crypto.ChannelCipher import org.openstrap.protocol.services.ChannelVersion import org.openstrap.protocol.services.ConnectCodec import org.openstrap.protocol.services.Endpoints import org.openstrap.protocol.services.ServiceList import org.openstrap.protocol.transport.AckStatus import org.openstrap.protocol.transport.ChannelMessage import org.openstrap.protocol.transport.Reassembler import org.openstrap.protocol.transport.buildChunks import org.openstrap.protocol.transport.parseDeviceAck</ID>
     <ID>MagicNumber:ActivityLayout.kt:ActivityLayout$0xFF</ID>
     <ID>MagicNumber:ActivityLayout.kt:ActivityLayout$4</ID>
     <ID>MagicNumber:ActivityLayout.kt:ActivityLayout$8</ID>
@@ -202,10 +205,8 @@
     <ID>MagicNumber:Settings.kt:SettingsCodec$4</ID>
     <ID>MagicNumber:Settings.kt:SettingsCodec$6</ID>
     <ID>MagicNumber:Settings.kt:SettingsCodec$8</ID>
-    <ID>MagicNumber:SportSession.kt:SportSession$240</ID>
     <ID>MagicNumber:SportSession.kt:SportSession$255</ID>
     <ID>MagicNumber:SportSession.kt:SportSession$3</ID>
-    <ID>MagicNumber:SportSession.kt:SportSession$30</ID>
     <ID>MagicNumber:SportSession.kt:SportSession$4</ID>
     <ID>MagicNumber:SportSession.kt:SportSession$5</ID>
     <ID>MagicNumber:SportSession.kt:SportSession$6</ID>
@@ -255,6 +256,7 @@
     <ID>ReturnCount:Settings.kt:SettingsCodec$fun parseVersion: SettingsProtocol?</ID>
     <ID>ReturnCount:Settings.kt:SettingsCodec$fun versionFlag: Pair&lt;Int, Int&gt;?</ID>
     <ID>ReturnCount:SportSession.kt:SportSession$fun parseVersion: Capabilities?</ID>
+    <ID>SpacingBetweenDeclarationsWithAnnotations:ChannelSession.kt:ChannelSession$/** Runtime feature bitmap from 0x0028, set after auth; null when not queried or the query failed (01 §3). */ @Volatile var features: org.openstrap.protocol.services.DeviceFeatures? = null</ID>
     <ID>ThrowingExceptionsWithoutMessageOrCause:DeviceFeatures.kt:DeviceFeatures.Companion$IndexOutOfBoundsException()</ID>
     <ID>ThrowsCount:ChannelCrypto.kt:ChannelCipher$fun decrypt: ByteArray</ID>
     <ID>ThrowsCount:ChannelSession.kt:ChannelSession$suspend fun handshake</ID>

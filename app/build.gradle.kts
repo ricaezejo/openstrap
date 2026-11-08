@@ -233,4 +233,5 @@ dependencies {
 
     lintChecks(libs.slack.compose.lint)
     detektPlugins(libs.compose.rules.detekt)
+    detektPlugins(libs.detekt.ktlint)
 }

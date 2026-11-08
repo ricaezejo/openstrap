@@ -39,7 +39,8 @@ jobs:
       - name: Test
         run: ./gradlew :protocol:test :app:testDebugUnitTest
 
-      # Android lint and detekt fail on any finding not in their baselines (app/lint-baseline.xml, */detekt-baseline-*.xml).
+      # Android lint and detekt (with the Compose and ktlint rules, config/detekt.yml) fail on any finding not in their
+      # baselines (app/lint-baseline.xml, */detekt-baseline-*.xml).
       # detekt checks the debug build only: release differs by four stub files in app/src/release, and checking it too
       # compiled the whole app a second time, about 5 of this step's 7 minutes.
       - name: Lint and static analysis

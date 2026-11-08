@@ -35,4 +35,5 @@ dependencies {
     testImplementation(libs.bouncycastle)
 
     detektPlugins(libs.compose.rules.detekt)
+    detektPlugins(libs.detekt.ktlint)
 }

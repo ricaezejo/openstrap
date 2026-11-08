@@ -102,3 +102,57 @@ Compose:
     active: true
   UnstableCollections:
     active: true
+
+
+# ktlint, run through detekt (detekt-rules-ktlint-wrapper) so it shares the baselines and the CI step. It keeps the
+# rules that catch mess (unused imports, indentation, import order, spacing, naming) and drops the ones that rewrap
+# code: the codebase keeps dense one-line calls, signatures and whens on purpose, and they reported over 15,000 lines.
+ktlint:
+  # style>MaxLineLength already reports long lines.
+  MaximumLineLength:
+    active: false
+  ArgumentListWrapping:
+    active: false
+  BinaryExpressionWrapping:
+    active: false
+  BlankLineBetweenWhenConditions:
+    active: false
+  ClassSignature:
+    active: false
+  EnumWrapping:
+    active: false
+  FunctionLiteral:
+    active: false
+  FunctionSignature:
+    active: false
+  MultiLineIfElse:
+    active: false
+  MultilineLoop:
+    active: false
+  ParameterListWrapping:
+    active: false
+  PropertyWrapping:
+    active: false
+  SpacingBetweenDeclarationsWithComments:
+    active: false
+  StatementWrapping:
+    active: false
+  TrailingCommaOnCallSite:
+    active: false
+  TrailingCommaOnDeclarationSite:
+    active: false
+  Wrapping:
+    active: false
+  # The rest default to 120 columns; the codebase allows 140 (.editorconfig).
+  ContextReceiverListWrapping:
+    maxLineLength: 140
+  ContextReceiverMapping:
+    maxLineLength: 140
+  FunctionExpressionBody:
+    maxLineLength: 140
+  FunctionReturnTypeSpacing:
+    maxLineLength: 140
+  ParameterListSpacing:
+    maxLineLength: 140
+  ParameterWrapping:
+    maxLineLength: 140
