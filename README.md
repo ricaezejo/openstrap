@@ -5,6 +5,11 @@
   </picture>
 </h1>
 
+<p align="center">
+  <a href="https://github.com/sayed0am/unstrap/actions/workflows/android.yml"><img src="https://github.com/sayed0am/unstrap/actions/workflows/android.yml/badge.svg" alt="Tests and lint"></a>
+  <a href="https://github.com/sayed0am/unstrap/actions/workflows/security.yml"><img src="https://github.com/sayed0am/unstrap/actions/workflows/security.yml/badge.svg" alt="Security scans"></a>
+</p>
+
 **Answers, not dashboards.**
 
 Wake up to how recovered you are. Train when your body is ready. Wind down when it's time.
@@ -86,6 +91,16 @@ To try it without a strap, build a demo copy that installs beside the real app a
 ```bash
 adb shell am start -n org.openstrap.app.demo/org.openstrap.app.MainActivity --ez demo_data true
 ```
+
+Every push and pull request runs the checks in CI. Old findings live in baselines, so only new ones fail the build:
+
+| Check | Tool | Run it locally |
+|---|---|---|
+| Tests, also under a German locale | JUnit, Robolectric | `./gradlew :protocol:test :app:testDebugUnitTest` |
+| Android code, resources and manifest | Android Lint | `./gradlew :app:lintDebug` |
+| Code smells, complexity, likely bugs, Compose rules, formatting | detekt with the Compose and ktlint rules | `./gradlew :app:detektDebug :protocol:detektMain` |
+| Insecure patterns in source and manifests | mobsfscan ([`.mobsf`](.mobsf) lists what's ignored and why) | `mobsfscan --config .mobsf app/src protocol/src` |
+| Known vulnerabilities in the libraries the APK ships, also weekly | OSV-Scanner | see [`security.yml`](.github/workflows/security.yml) |
 
 Pushing a `vX.Y.Z` tag publishes a signed release through CI ([`android.yml`](.github/workflows/android.yml)).
 

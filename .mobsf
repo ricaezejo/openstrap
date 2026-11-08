@@ -1,0 +1,20 @@
+---
+# mobsfscan (CI: .github/workflows/android.yml). INFO findings are hardening advice (root detection, pinning); only
+# WARNING and ERROR fail the build. Each ignored rule below was checked by hand.
+- ignore-paths:
+    - app/src/test
+    - protocol/src/test
+  severity-filter:
+    - WARNING
+    - ERROR
+  ignore-rules:
+    # The strap's BLE protocol uses single AES-128 blocks (protocol/crypto/ChannelCrypto.kt); not ours to change.
+    - android_kotlin_aes_ecb
+    # The firmware server hands out MD5 checksums; it checks the download, it isn't a security control.
+    - android_kotlin_md5
+    # Every execSQL is a Room migration or VACUUM INTO: values bound with ?, names from code, the path quoted.
+    - android_kotlin_sql_raw_query
+    # Fires on the debug and benchmark manifest overlays; the main manifest sets allowBackup="false".
+    - android_manifest_missing_explicit_allow_backup
+    # StrandHogg 2.0 needs minSdk below 29; minSdk is 30, set in app/build.gradle.kts where mobsfscan doesn't look.
+    - android_task_hijacking2

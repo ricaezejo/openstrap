@@ -1,0 +1,58 @@
+# Security scans: mobsfscan over the source and manifests, OSV-Scanner over the libraries the release APK ships.
+# Weekly too, since a new advisory against a library fails it without any change here.
+name: Security
+
+on:
+  push:
+    branches: [main, develop]
+  pull_request:
+  schedule:
+    - cron: "0 6 * * 1"
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+  # SARIF upload of the mobsfscan report.
+  security-events: write
+
+jobs:
+  scan:
+    runs-on: ubuntu-26.04
+    steps:
+      - uses: actions/checkout@v5
+
+      # Ignored rules and why are in .mobsf. mobsfscan exits 0 on WARNING findings, so the filtered report is checked.
+      - name: mobsfscan
+        run: |
+          pipx run mobsfscan==1.1.0 --config .mobsf --sarif -o mobsfscan.sarif app/src protocol/src || true
+          jq -r '.runs[].results[] | "\(.ruleId): \(.locations[0].physicalLocation.artifactLocation.uri):\(.locations[0].physicalLocation.region.startLine)"' mobsfscan.sarif
+          jq -e '[.runs[].results[]] | length == 0' mobsfscan.sarif > /dev/null
+
+      - uses: github/codeql-action/upload-sarif@v4
+        if: ${{ always() && hashFiles('mobsfscan.sarif') != '' }}
+        with:
+          sarif_file: mobsfscan.sarif
+          category: mobsfscan
+
+      - uses: actions/setup-java@v5
+        with:
+          distribution: temurin
+          java-version: 21
+
+      - uses: gradle/actions/setup-gradle@v5
+
+      - name: Install Android SDK packages
+        run: yes | "$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager" "platforms;android-37.2" "build-tools;36.0.0" > /dev/null
+
+      # Gradle keeps no lockfile, so one is written here for the scanner: only the release APK's runtime libraries, since
+      # build tools (lint, KSP) and test libraries never reach a phone.
+      - name: OSV-Scanner
+        run: |
+          ./gradlew --init-script .github/scripts/lock-all.gradle.kts :app:dependencies --configuration releaseRuntimeClasspath --write-locks -q > /dev/null
+          curl -sSfL -o osv-scanner https://github.com/google/osv-scanner/releases/download/v2.7.0/osv-scanner_linux_amd64
+          echo "160c6253e2922e9e0a6a9771c5c4c40a4b3c6090b34a3cdd5e80c96cc2e4218b  osv-scanner" | sha256sum -c -
+          chmod +x osv-scanner
+          ./osv-scanner scan source --lockfile app/gradle.lockfile
