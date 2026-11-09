@@ -16,7 +16,7 @@ private const val AUTHORITY_SUFFIX = ".share"
 /** A workout's GPX as a cached file another app can read for a moment, through the share FileProvider. */
 internal object GpxShare {
     /** Named like the story picture: after the workout's start (epoch seconds). */
-    fun fileName(workoutStart: Long) = "OpenStrap_$workoutStart.gpx"
+    fun fileName(workoutStart: Long) = "unstrap_$workoutStart.gpx"
 
     /** [gpx] written over [fileName] in the share cache; null when it can't be written. Blocks on the file write. */
     fun forSharing(context: Context, fileName: String, gpx: String): Uri? = runCatching {

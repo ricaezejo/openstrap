@@ -22,7 +22,7 @@ object GpxWriter {
         }
         val sb = StringBuilder()
         sb.append("<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n")
-        sb.append("<gpx version=\"1.1\" creator=\"OpenStrap\" xmlns=\"http://www.topografix.com/GPX/1/1\" ")
+        sb.append("<gpx version=\"1.1\" creator=\"unstrap\" xmlns=\"http://www.topografix.com/GPX/1/1\" ")
         sb.append("xmlns:gpxtpx=\"http://www.garmin.com/xmlschemas/TrackPointExtension/v1\">\n")
         sb.append("<trk><name>").append(escape(name)).append("</name>\n")
         // Fixes strictly inside a pause are left out, so no line runs through it; a pause ends a segment.

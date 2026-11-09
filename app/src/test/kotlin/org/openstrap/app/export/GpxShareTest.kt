@@ -23,7 +23,7 @@ class GpxShareTest {
     private fun read(uri: android.net.Uri) = context.contentResolver.openInputStream(uri)!!.use { it.readBytes().decodeToString() }
 
     @Test fun `fileName names the file after the workout`() {
-        assertEquals("OpenStrap_1792000000.gpx", GpxShare.fileName(1_792_000_000))
+        assertEquals("unstrap_1792000000.gpx", GpxShare.fileName(1_792_000_000))
     }
 
     @Test fun `forSharing writes the text and returns a content uri`() {
