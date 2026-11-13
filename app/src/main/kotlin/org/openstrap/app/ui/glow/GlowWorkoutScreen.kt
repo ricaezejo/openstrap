@@ -213,7 +213,10 @@ private fun PastSummary(
                         else SummaryHero(h.value, h.unit, h.figures, WorkoutDetailCopy.sentence(w.sportType, a.activeSeconds, w.trainingLoad, usual, zones.toList()), h.line)
                     }
                     SummaryHeroCard(hero, mainZoneColor(zones, familyColor(family)), Workouts.effort(w.trainingLoad, usual))
-                    FamilySection(family, summary, emptyList(), others, weekStarts, heartLine = false, onOpenMap = { routeMap.open(w.start) })
+                    FamilySection(
+                        family, summary, emptyList(), others, weekStarts, heartLine = false,
+                        onOpenMap = { routeMap.open(w.start) },
+                    )
                     // Always there, even before any heart rate, since it holds Trim.
                     HeartRateCard(a, trim)
                     val facts = WorkoutDetailCopy.facts(
