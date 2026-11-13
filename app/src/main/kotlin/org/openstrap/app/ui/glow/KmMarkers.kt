@@ -4,6 +4,7 @@ import android.graphics.Bitmap
 import android.graphics.Canvas
 import android.graphics.Paint
 import android.graphics.Typeface
+import androidx.core.graphics.createBitmap
 import org.openstrap.app.data.Route
 
 /** The marker number's size, and a smaller one so three digits still sit inside the ring. */
@@ -22,7 +23,7 @@ internal fun kmMarkerFeatures(markers: List<Pair<Int, Route.Point>>): String =
  */
 internal fun kmMarkerBitmap(km: Int, density: Float): Bitmap {
     val size = (22 * density).toInt()
-    val bitmap = Bitmap.createBitmap(size, size, Bitmap.Config.ARGB_8888)
+    val bitmap = createBitmap(size, size)
     val canvas = Canvas(bitmap)
     val c = size / 2f
     val ring = 2 * density
