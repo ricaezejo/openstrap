@@ -90,4 +90,6 @@
     <string name="glow_summary_map_route_only">仅显示轨迹，不显示地图</string>
     <string name="glow_summary_map_show_map">显示地图</string>
     <string name="glow_summary_map_fit">适配轨迹</string>
+    <string name="glow_summary_export">导出</string>
+    <string name="glow_summary_export_failed">无法导出轨迹</string>
 </resources>
