@@ -9,6 +9,7 @@ import org.junit.Before
 import org.junit.Test
 import org.junit.runner.RunWith
 import org.robolectric.RobolectricTestRunner
+import java.io.File
 
 /** The GPX file a workout's Export hands to the share sheet: its name, and the cached copy behind the FileProvider. */
 @RunWith(RobolectricTestRunner::class)
@@ -37,5 +38,11 @@ class GpxShareTest {
         GpxShare.forSharing(context, "run.gpx", "<gpx>first and longer</gpx>")
         val uri = GpxShare.forSharing(context, "run.gpx", "<gpx>2</gpx>")
         assertEquals("<gpx>2</gpx>", read(uri!!))
+    }
+
+    @Test fun `an export of another workout removes the earlier file`() {
+        GpxShare.forSharing(context, "a.gpx", "<gpx/>")
+        GpxShare.forSharing(context, "b.gpx", "<gpx/>")
+        assertEquals(listOf("b.gpx"), File(context.cacheDir, "share").list()!!.filter { it.endsWith(".gpx") })
     }
 }

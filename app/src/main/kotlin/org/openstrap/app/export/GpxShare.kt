@@ -18,9 +18,11 @@ internal object GpxShare {
     /** Named like the story picture: after the workout's start (epoch seconds). */
     fun fileName(workoutStart: Long) = "unstrap_$workoutStart.gpx"
 
-    /** [gpx] written over [fileName] in the share cache; null when it can't be written. Blocks on the file write. */
+    /** [gpx] written to [fileName] in the share cache, replacing earlier exports; null when it can't be written. Blocks. */
     fun forSharing(context: Context, fileName: String, gpx: String): Uri? = runCatching {
-        val file = File(File(context.cacheDir, "share").apply { mkdirs() }, fileName)
+        val dir = File(context.cacheDir, "share").apply { mkdirs() }
+        dir.listFiles { f -> f.extension == "gpx" }?.forEach { it.delete() }
+        val file = File(dir, fileName)
         file.writeText(gpx)
         FileProvider.getUriForFile(context, context.packageName + AUTHORITY_SUFFIX, file)
     }.onFailure { Log.w(TAG, "writing the route to share failed", it) }.getOrNull()
