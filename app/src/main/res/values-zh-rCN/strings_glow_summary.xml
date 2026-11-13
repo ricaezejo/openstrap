@@ -85,4 +85,9 @@
     </plurals>
     <string name="glow_summary_set">第 %1$d 组</string>
     <string name="glow_summary_set_rest">休息 %1$s</string>
+    <string name="glow_summary_map_open">全屏打开地图</string>
+    <string name="glow_summary_map_close">关闭</string>
+    <string name="glow_summary_map_route_only">仅显示轨迹，不显示地图</string>
+    <string name="glow_summary_map_show_map">显示地图</string>
+    <string name="glow_summary_map_fit">适配轨迹</string>
 </resources>
